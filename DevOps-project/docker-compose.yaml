@@ -1,0 +1,91 @@
+version: '3.8'
+services:
+
+  flask_app:
+    image: flask-server
+    ports:
+      - 8443:8443
+    environment:
+      - TELEGRAM_APP_URL=https://7ab6-147-235-222-227.ngrok-free.app
+      - BUCKET_NAME=massri-abed-bucket
+      - YOLO_IP_SERVICE=yolo_service
+    secrets:
+      - source: aws_config
+        target: /root/.aws/config
+      - source: aws_credentials
+        target: /root/.aws/credentials
+      - telegram_token_file
+
+  yolo_service:
+    image: yolo-service
+    ports:
+      - 8081:8081
+    environment:
+      - BUCKET_NAME=massri-abed-bucket
+
+    secrets:
+      - source: aws_config
+        target: /root/.aws/config
+      - source: aws_credentials
+        target: /root/.aws/credentials
+
+  mongo1:
+    image: mongo:5
+    container_name: mongo1
+    ports:
+      - "27017:27017"
+    command: mongod --replSet myReplicaSet --bind_ip localhost,mongo1
+    #docker run -v db-data:/data/db
+    volumes:
+      - db-data-m1:/data/db #Named volumes
+
+  mongo2:
+    image: mongo:5
+    container_name: mongo2
+    ports:
+      - "27018:27017"
+    command: mongod --replSet myReplicaSet --bind_ip localhost,mongo2
+    #docker run -v db-data:/data/db
+    volumes:
+      - db-data-m2:/data/db #Named volumes
+
+  mongo3:
+    image: mongo:5
+    container_name: mongo3
+    ports:
+      - "27019:27017"
+    command: mongod --replSet myReplicaSet --bind_ip localhost,mongo3
+    #docker run -v db-data:/data/db
+    volumes:
+      - db-data-m3:/data/db #Named volumes
+
+  init-replica-set:
+    image: mongo:5
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+    command: >
+      bash -c 'sleep 10 &&
+      mongo mongo1:27017 --eval "rs.initiate({
+        _id: \"myReplicaSet\",
+        members: [
+          {_id: 0, host: \"mongo1:27017\"},
+          {_id: 1, host: \"mongo2:27017\"},
+          {_id: 2, host: \"mongo3:27017\"}
+        ]
+      })"'
+
+
+secrets:
+  aws_credentials:
+    file: ~/.aws/credentials
+  aws_config:
+    file: ~/.aws/config
+  telegram_token_file:
+    file: ~/token.txt
+
+volumes:
+  db-data-m1:
+  db-data-m2:
+  db-data-m3:
