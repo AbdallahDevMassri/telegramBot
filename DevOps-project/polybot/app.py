@@ -8,10 +8,7 @@ app = flask.Flask(__name__)
 
 TELEGRAM_APP_URL = os.environ['TELEGRAM_APP_URL']
 
-TELEGRAM_TOKEN = ""
-with open('/run/secrets/telegram_token_file', 'r') as file:
-    TELEGRAM_TOKEN = ''.join(file.read().split('\n'))
-    print(TELEGRAM_TOKEN)
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN', '')
 
 @app.route('/', methods=['GET'])
 def index():
